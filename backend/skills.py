@@ -1,5 +1,6 @@
 """Cross-industry skill taxonomy. Entry format: "canonical|alias|alias". Extend freely."""
 import re
+from collections import Counter
 from functools import lru_cache
 from typing import Iterable, List, Set
 
@@ -99,6 +100,11 @@ _COMBINED = re.compile(BOUND_L + "(" + "|".join(
 def extract_skills(text_lower: str) -> Set[str]:
     """Canonical skills mentioned in already-lowercased text (one regex pass)."""
     return {ALIAS_TO_CANON[m] for m in _COMBINED.findall(text_lower)}
+
+
+def count_skills(text_lower: str) -> Counter:
+    """Like extract_skills, but with mention counts (used to rank resume skills)."""
+    return Counter(ALIAS_TO_CANON[m] for m in _COMBINED.findall(text_lower))
 
 
 def normalize_skill(skill: str) -> str:

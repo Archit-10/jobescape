@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Literal, Optional
 
 import pandas as pd
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ from pydantic import BaseModel
 import config as C
 import engine
 import exporter
+import resume
 from schemas import ScrapeRequest
 from skills import SKILLS, search_skills
 
@@ -242,3 +243,15 @@ def countries():
 @app.get("/api/skills")
 def skills(q: str = Query("", max_length=40), limit: int = Query(20, ge=1, le=50)):
     return search_skills(q, limit)
+
+
+@app.post("/api/resume/analyze")
+def analyze_resume_upload(file: UploadFile = File(...), owner: str = Depends(current_owner)):
+    """Upload a PDF/DOCX/TXT resume -> profile + `suggested_request` to pre-fill the search form.
+    The file is parsed in memory and discarded; nothing is stored or logged."""
+    data = file.file.read(resume.MAX_BYTES + 1)
+    try:
+        text = resume.extract_text(file.filename or "", file.content_type or "", data)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return resume.analyze_resume(text)
