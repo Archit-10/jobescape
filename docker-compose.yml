@@ -1,0 +1,42 @@
+name: jobescape
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Only your own frontend may call the API from a browser.
+      CORS_ORIGINS: http://${PUBLIC_HOST:-localhost}:${FRONTEND_PORT:-3000},http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000}
+      SCRAPER_PROXIES: ${SCRAPER_PROXIES:-}
+      MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-2}
+      MAX_PARALLEL_TASKS: ${MAX_PARALLEL_TASKS:-12}
+      MAX_TASKS_PER_JOB: ${MAX_TASKS_PER_JOB:-150}
+      MAX_RESULTS_PER_SITE: ${MAX_RESULTS_PER_SITE:-100}
+      JOB_TTL_SECONDS: ${JOB_TTL_SECONDS:-3600}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    tmpfs:
+      - /tmp:size=512m,mode=1777   # generated Excel files; RAM only, wiped on restart
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the site at build time: the address the BROWSER uses for the backend.
+        NEXT_PUBLIC_API_URL: http://${PUBLIC_HOST:-localhost}:${BACKEND_PORT:-8000}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

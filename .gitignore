@@ -1,0 +1,13 @@
+# secrets / local config
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/scraped/
+
+# node
+node_modules/
+.next/
